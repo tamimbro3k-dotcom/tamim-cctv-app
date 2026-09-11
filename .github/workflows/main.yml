@@ -1,0 +1,43 @@
+name: Build Tamim CCTV APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract Android project ZIP
+        run: |
+          mkdir app-project
+          unzip -q "$(find . -maxdepth 1 -name '*.zip' | head -n 1)" -d app-project
+
+      - name: Find project
+        run: |
+          find app-project -name settings.gradle.kts -o -name settings.gradle
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build APK
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: '8.7'
+          arguments: assembleDebug
+          build-root-directory: app-project
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tamim-CCTV-APK
+          path: app-project/**/build/outputs/apk/debug/*.apk
