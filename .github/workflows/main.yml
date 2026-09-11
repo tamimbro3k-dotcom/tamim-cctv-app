@@ -14,30 +14,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract Android project ZIP
+      - name: Extract Android project
         run: |
           mkdir app-project
           unzip -q "$(find . -maxdepth 1 -name '*.zip' | head -n 1)" -d app-project
 
       - name: Find project
+        id: find
         run: |
-          find app-project -name settings.gradle.kts -o -name settings.gradle
+          PROJECT=$(find app-project -type f -name settings.gradle.kts -printf '%h\n' | head -n 1)
+          echo "project=$PROJECT" >> "$GITHUB_OUTPUT"
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Build APK
-        uses: gradle/gradle-build-action@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-          arguments: assembleDebug
-          build-root-directory: app-project
+          cache-disabled: true
+
+      - name: Build APK
+        working-directory: ${{ steps.find.outputs.project }}
+        run: |
+          gradle :app:assembleDebug --no-daemon --no-build-cache
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Tamim-CCTV-APK
-          path: app-project/**/build/outputs/apk/debug/*.apk
+          path: app-project/**/app/build/outputs/apk/debug/*.apk
