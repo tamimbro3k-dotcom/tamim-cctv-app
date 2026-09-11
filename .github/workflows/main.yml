@@ -37,49 +37,17 @@ jobs:
           gradle-version: '8.7'
           cache-disabled: true
 
-      - name: Fix Android and Kotlin code
+      - name: Fix JVM targets
         working-directory: ${{ steps.find.outputs.project }}
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          p = Path("app/src/main/java/com/tamimcctv/app/MainActivity.kt")
+          p = Path("app/build.gradle.kts")
           text = p.read_text()
 
-          old = '''@Composable
-          fun TamimApp() {
-              var tab by remember { mutableStateOf(0) }
-              var selected by remember { mutableStateOf<Product?>(null) }
-          '''
-
-          new = '''@Composable
-          fun TamimApp() {
-              val activity = LocalContextHolder.current as MainActivity
-              var tab by remember { mutableStateOf(0) }
-              var selected by remember { mutableStateOf<Product?>(null) }
-          '''
-
-          text = text.replace(old, new)
-
-          text = text.replace(
-              '(LocalContextHolder.current as MainActivity).openUrl(WEBSITE_URL)',
-              'activity.openUrl(WEBSITE_URL)'
-          )
-
-          text = text.replace(
-              '(LocalContextHolder.current as MainActivity).whatsapp()',
-              'activity.whatsapp()'
-          )
-
-          p.write_text(text)
-
-          print("MainActivity.kt fixed successfully")
-          PY
-
-      - name: Fix JVM targets
-        working-directory: ${{ steps.find.outputs.project }}
-        run: |
-          cat >> app/build.gradle.kts <<'EOF'
+          if "sourceCompatibility = JavaVersion.VERSION_17" not in text:
+              text += '''
 
           android {
               compileOptions {
@@ -91,7 +59,10 @@ jobs:
           kotlin {
               jvmToolchain(17)
           }
-          EOF
+          '''
+
+          p.write_text(text)
+          PY
 
       - name: Build APK
         working-directory: ${{ steps.find.outputs.project }}
